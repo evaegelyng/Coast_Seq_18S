@@ -205,30 +205,3 @@ for library_root in libraries:
     ) << """
       Rscript ./scripts/sum_AS_SS.r tmp/{library_id}
       """.format(library_id=library_id)    
-
-#Summing sequence tables of all libraries
-input_files = []
-for library_root in libraries:
-    library_id = os.path.basename(library_root)   
-    input_files.append("tmp/{}/seqtab_RDS".format(library_id))
-    input_files.append("tmp/{}/seqtab.nochim_RDS".format(library_id))
- 
-output_files = []
-    
-output_files.append("results/seqtab_Both")
-output_files.append("results/seqtab.nochim_Both")
-output_files.append("results/DADA2_raw.table")
-output_files.append("results/DADA2_raw.otus")
-output_files.append("results/DADA2_nochim.table")
-output_files.append("results/DADA2_nochim.otus")
-    
-gwf.target(
-   name="sum_libraries_{}".format(project_name), # f'sum_libraries_{project_name}' is equivalent
-   inputs=input_files,
-   outputs=output_files,
-   cores=16,
-   memory="32g",
-   walltime="1:00:00",
- ) << """
-   Rscript ./scripts/sum_libraries.r tmp/ results/
-   """.format()                
