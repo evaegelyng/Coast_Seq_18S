@@ -11,29 +11,43 @@ library(ggplot2)
 library(stringr)
 library(vegan)
 
-###Make phyloseq object from raw data
-otu_mat<-as.matrix(read.table("cleaned_tax_ncbi_12_12_22.txt", sep="\t", header=T, row.names=1,check.names=F))
+##Make phyloseq object from tables
+###Load OTU table
+otu_mat<-read.table("~/eDNA/faststorage/Velux/CoastSequence/Autumn/Gua18s/both_seasons/ncbi_nt_tax/results/COSQ_Curated_LULU_95.tsv", sep="\t", header=T, row.names=1,check.names=F)
+###Remove total reads column and convert to matrix
+otu_mat<-within(otu_mat,rm(total_reads))
+otu_mat<-as.matrix(otu_mat)
 
-taxonomy_ncbi<-read.table("cleaned_ncbi_12_12_22.txt", sep='\t', header=T, comment="")
-tax_mat_b<-as.matrix(taxonomy_ncbi)
+###Summarize no. of reads per PCR replicate
+reads<-colSums(otu_mat)
+mean(reads)
+max
+
+###Load taxonomy table
+taxonomy_ncbi<-read.table("cleaned_tax_pident90.txt", sep='\t', header=T, comment="")
+###Subset to OTUs retained by LULU, and convert to matrix
+taxonomy_lulu <- taxonomy_ncbi[rownames(taxonomy_ncbi) %in% rownames(otu_mat),]
+tax_mat_b<-as.matrix(taxonomy_lulu)
+
+###Write filtered taxonomy table to file
+write.table(taxonomy_lulu, "cleaned_tax_pident90_lulu.txt", sep="\t", quote=FALSE, row.names=TRUE)
 
 OTU = otu_table(otu_mat, taxa_are_rows = TRUE)
 TAX_b = tax_table(tax_mat_b)
 p_ncbi = phyloseq(OTU, TAX_b)
 
-#Load metadata
-setwd("/home/mpavila/eDNA/faststorage/Velux/CoastSequence/Autumn/Gua18s/both_seasons/results/metadata")
-metadata<-read.table("cleaned_ncbi_metadata_12_12_22.txt", sep="\t", header=T)
+###Load metadata
+metadata<-read.table("metadata/cleaned_metadata_pident90.txt", sep="\t", header=T)
 
 ##SITE INFO
-c_s<-read.table("cluster_site.txt", sep="\t", header=T)
+c_s<-read.table("metadata/cluster_site.txt", sep="\t", header=T)
 metadata$Location<-c_s$Site_name[match(metadata$cluster, c_s$cluster)]
 metadata$cluster<-as.integer(metadata$cluster)
 metadata$cl_se<-as.character(paste(metadata$cluster,metadata$season,sep="_"))
 sampledata = sample_data(data.frame(metadata, row.names=metadata$sample_ID, stringsAsFactors=FALSE))
 
-DADAwang1 = merge_phyloseq(p_ncbi, sampledata)
-DADAwang1
+COSQ_final = merge_phyloseq(p_ncbi, sampledata)
+COSQ_final
 
 ## Rarefy PCR replicates to median depth, keeping replicates with lower depth
 ### Remove PCR replicates with zero reads
@@ -70,10 +84,10 @@ COSQ_rare
 
 ## Rarefy samples to median read depth
 ### First, merge PCR replicates from the same field sample
-merged = merge_samples(COSQ_rare, "root")
+merged = merge_samples(COSQ_rare, "sample_root")
 
 ## Rebuild sample data, as the merge_samples function only handles merging of the OTU table
-d<-data.frame(sample_data(merged)[,c("root","cluster","season","habitat","substrate_type","field_replicate")])
+d<-data.frame(sample_data(merged)[,c("sample_root","cluster","season","habitat","substrate_type","field_replicate")])
 
 d$po<- sapply(strsplit(as.character(rownames(d)), "2C"), tail, 1)
 d$pn<-gsub('\\d','', d$po)
@@ -81,12 +95,12 @@ d$pn1<-gsub(".*C(.+).*", "\\1", d$pn)
 d$habitat<-ifelse(d$pn1=="EW"|d$pn1=="EB", "eelgrass", ifelse(d$pn1=="RW"|d$pn1=="RB", "rocks", "sand"))
 d$substrate_type<-ifelse(grepl("B", d$pn1, fixed=T), "sediment", "water")
 d$season<-ifelse(grepl("2C", as.character(rownames(d)), fixed=T), "autumn", "spring")
-d$root<-rownames(d)
-d$pn<-gsub('\\D','_', d$root)
+d$sample_root<-rownames(d)
+d$pn<-gsub('\\D','_', d$sample_root)
 d$pn2<-gsub(".*_(.+)__.*", "\\1", d$pn)
 d$cluster<-as.integer(d$pn2)
 
-sample_data(merged)<-d[,c("root","cluster","season","habitat","substrate_type","field_replicate")]
+sample_data(merged)<-d[,c("sample_root","cluster","season","habitat","substrate_type","field_replicate")]
 
 ### Make a table with a column indicating which samples have a read depth above the median
 reads<-sample_sums(merged)
@@ -96,7 +110,7 @@ thres<-round(median(combined$reads))
 combined$q<-combined$reads>thres
 
 ### Transfer the column generated above to the phyloseq object
-sample_data(merged)$over_median<-combined$q[match(sample_data(merged)$root, combined$root)]
+sample_data(merged)$over_median<-combined$q[match(sample_data(merged)$sample_root, combined$sample_root)]
 
 ### Extract and then rarefy the samples with a read depth above the median
 above_t<-rarefy_even_depth(subset_samples(merged, over_median==TRUE), sample.size=as.numeric(thres), replace=FALSE, trimOTUs = TRUE, rngseed= 13072021)
