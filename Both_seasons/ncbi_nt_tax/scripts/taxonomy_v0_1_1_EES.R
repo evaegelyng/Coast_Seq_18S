@@ -41,7 +41,7 @@ library(tidyr)
 #library(stringr) # For splitting character strings into words. Only necessary when using BOLD+nt database (see below) 
 
 # Provide API key for NCBI
-options(ENTREZ_KEY="8b8017fcf2b0996e05b4a9611ab6a735c208")
+options(ENTREZ_KEY="d48b9acccd829282ff4386f716341ed2f608")
 
 # Read the completed BLAST results into a table
 IDtable <- read.csv(file = args[1], sep='\t', header=F, as.is=TRUE)
@@ -67,7 +67,7 @@ IDtable$V16<-"NA"
 #IDtable$V16<-gsub(" "," ",IDtable$V16) #This may be unnecessary
 
 # Read the possible problematic taxids as a table
-MergedTaxIDs<-read.table("/home/mpavila/eDNA/faststorage/blastdb/nt_220927/taxdump/MergedTaxIDs", header=TRUE)
+MergedTaxIDs<-read.table("/faststorage/project/eDNA/blastdb/nt_220927/taxdump/MergedTaxIDs", header=TRUE)
 
 # Add header information
 names(IDtable) <- c("qseqid","sseqid","pident","length","mismatch","gapopen","qstart","qend","sstart","send","evalue","bitscore","qlen","qcovs","staxid","ssciname")

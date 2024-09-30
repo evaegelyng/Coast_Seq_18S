@@ -227,16 +227,28 @@ wer4p[i,"phylum"]<-t_nowf[e,"phylum"]
 sum(is.na(wer4p$phylum)) # 735
 length(levels(factor(wer4p$phylum))) # 46
 
-## Simplify kingdom names to Plantae, Chromista, Metazoa, Protista, Fungi
-unique(wer4p$kingdom)
+## Simplify kingdom names to Plantae, Chromista, Metazoa, Protista, Fungi to match with COI dat
+## Check phylum names
+unique(wer4p$phylum)
+## Check class names where phylum is "NA"
+t_nowf[is.na(t_nowf$phylum),]
+## Make new column for five-kingdom system
 wer4p$kingdom_5<-"NA"
 
 wer4p<-wer4p %>%
-  mutate(kingdom_5 = case_when(kingdom %in% c("Plantae","Viridiplantae") ~ "Plantae",
-                             kingdom %in% c("Chromista","Haptista") ~ 'Chromista',
-                             kingdom %in% c("Protozoa","Discoba","Sar","Amoebozoa") ~ 'Protozoa',
-                             kingdom ==  "Metazoa" ~ 'Metazoa',
-                             kingdom ==  "Fungi" ~ 'Fungi',TRUE ~ NA_character_),
+  mutate(kingdom_5 = case_when(phylum %in% c("Rhodophyta","Streptophyta","Chlorophyta","Prasinodermophyta","Rhodelphidia") ~ "Plantae",
+                             phylum %in% c("Ciliophora","Ochrophyta","Cryptophyta","Bacillariophyta","Cercozoa","Myzozoa",
+                             "Endomyxa","PX clade","Heliozoa","Apicomplexa") ~ 'Chromista',
+                             phylum %in% c("Euglenozoa","Choanozoa","Sulcozoa","Tubulinea","Sarcomastigophora","Evosea","Discosea") ~ 'Protozoa',
+                             phylum %in% c("Arthropoda","Nematoda","Platyhelminthes","Annelida","Nemertea","Mollusca",
+                             "Bryozoa","Porifera","Kinorhyncha","Rotifera","Chordata","Cnidaria","Chaetognatha","Ctenophora",
+                             "Echinodermata","Tardigrada","Acanthocephala") ~ 'Metazoa',
+                             phylum %in% c("Basidiomycota","Chytridiomycota","Ascomycota","Mucoromycota","Blastocladiomycota",
+                             "Zoopagomycota","Aphelida") ~ 'Fungi', 
+                             class %in% c("Bigyra","Developea","Hyphochytriomycetes","Polycystinea") ~ "Chromista",
+                             class %in% c("Choanoflagellata") ~ "Protozoa",
+                             class %in% c("Glaucocystophyceae") ~ "Plantae",
+                             TRUE ~ NA_character_),
          kingdom_5 = factor(kingdom_5, levels = c('Plantae',"Chromista","Protozoa","Metazoa","Fungi")))
 
 unique(wer4p$kingdom_5)

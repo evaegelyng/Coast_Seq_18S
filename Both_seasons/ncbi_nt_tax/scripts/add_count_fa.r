@@ -1,3 +1,6 @@
+#In terminal run:
+#conda activate hmsc
+
 library(tidyverse)
 library(seqinr)
 library("Biostrings")

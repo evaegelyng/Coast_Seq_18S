@@ -4,8 +4,8 @@
 ## Load packages
 library(phyloseq)
 library(tibble)
-library(dplyr)
 library(plyr)
+library(dplyr)
 library(scales)
 library(ggplot2)
 library(stringr)
@@ -13,15 +13,17 @@ library(vegan)
 
 ##Make phyloseq object from tables
 ###Load OTU table
-otu_mat<-read.table("~/eDNA/faststorage/Velux/CoastSequence/Autumn/Gua18s/both_seasons/ncbi_nt_tax/results/COSQ_Curated_LULU_95.tsv", sep="\t", header=T, row.names=1,check.names=F)
-###Remove total reads column and convert to matrix
-otu_mat<-within(otu_mat,rm(total_reads))
-otu_mat<-as.matrix(otu_mat)
+otu_tab<-read.table("~/eDNA/faststorage/Velux/CoastSequence/Autumn/Gua18s/both_seasons/ncbi_nt_tax/results/COSQ_Curated_LULU_97.tsv", sep="\t", header=T, row.names=1,check.names=F)
+###Remove total reads column 
+otu_tab<-within(otu_tab,rm(total_reads))
+
+###Convert to matrix for phyloseq
+otu_mat<-as.matrix(otu_tab)
 
 ###Summarize no. of reads per PCR replicate
 reads<-colSums(otu_mat)
 mean(reads)
-max
+sd(reads)
 
 ###Load taxonomy table
 taxonomy_ncbi<-read.table("cleaned_tax_pident90.txt", sep='\t', header=T, comment="")
@@ -30,7 +32,7 @@ taxonomy_lulu <- taxonomy_ncbi[rownames(taxonomy_ncbi) %in% rownames(otu_mat),]
 tax_mat_b<-as.matrix(taxonomy_lulu)
 
 ###Write filtered taxonomy table to file
-write.table(taxonomy_lulu, "cleaned_tax_pident90_lulu.txt", sep="\t", quote=FALSE, row.names=TRUE)
+write.table(taxonomy_lulu, "cleaned_tax_pident90_lulu_97.txt", sep="\t", quote=FALSE, row.names=TRUE)
 
 OTU = otu_table(otu_mat, taxa_are_rows = TRUE)
 TAX_b = tax_table(tax_mat_b)
@@ -48,6 +50,16 @@ sampledata = sample_data(data.frame(metadata, row.names=metadata$sample_ID, stri
 
 COSQ_final = merge_phyloseq(p_ncbi, sampledata)
 COSQ_final
+
+##As rarefying removes data, first try normalizing by simply transforming to relative abundances
+### First, merge PCR replicates from the same field sample
+merged_1 = merge_samples(COSQ_final, "sample_root")
+### Transform to rel abund
+otu_tab_stand <- decostand(otu_table(merged_1), "total")
+### Hellinger transformation (square-root) to reduce influence of a few very abundant species 
+otu_tab_trans <- decostand(otu_tab_stand, "hellinger")
+### Save table
+write.table(otu_tab_trans,"otu_rel_hel_97.txt", sep="\t", row.names=TRUE)
 
 ## Rarefy PCR replicates to median depth, keeping replicates with lower depth
 ### Remove PCR replicates with zero reads
@@ -71,6 +83,9 @@ sample_data(COSQ_final)$over_median<-combinedi$q[match(sample_data(COSQ_final)$s
 
 ### Extract and then rarefy the PCR replicates with a read depth above the median
 above_t<-rarefy_even_depth(subset_samples(COSQ_final, over_median==TRUE), sample.size=as.numeric(threshold), replace=FALSE, trimOTUs = TRUE, rngseed= 13072021)
+
+# 1129OTUs were removed because they are no longer 
+# present in any sample after random subsampling
 
 ### Extract the PCR replicates with a read depth at or below the median
 below_t<-subset_samples(COSQ_final, over_median==FALSE)
@@ -115,6 +130,8 @@ sample_data(merged)$over_median<-combined$q[match(sample_data(merged)$sample_roo
 ### Extract and then rarefy the samples with a read depth above the median
 above_t<-rarefy_even_depth(subset_samples(merged, over_median==TRUE), sample.size=as.numeric(thres), replace=FALSE, trimOTUs = TRUE, rngseed= 13072021)
 
+#1396OTUs were removed
+
 ### Extract the samples with a read depth at or below the median
 below_t<-subset_samples(merged, over_median==FALSE)
 
@@ -132,7 +149,7 @@ COSQ_rare2
 tax_m<-data.frame(tax_table(COSQ_rare2))
 otu_m<-data.frame(otu_table(COSQ_rare2),check.names=F)
 
-write.table(data.frame(sample_data(COSQ_rare2), check.names=F), "metadata/metadata_rarefy.txt", sep="\t", quote=FALSE, row.names=TRUE)
+write.table(data.frame(sample_data(COSQ_rare2), check.names=F), "metadata/metadata_rarefy_97.txt", sep="\t", quote=FALSE, row.names=TRUE)
 
-write.table(otu_m, "otu_rarefy.txt", sep="\t", quote=FALSE, row.names=TRUE)
-write.table(tax_m, "tax_rarefy.txt", sep="\t", quote=FALSE, row.names=TRUE)
+write.table(otu_m, "otu_rarefy_97.txt", sep="\t", quote=FALSE, row.names=TRUE)
+write.table(tax_m, "tax_rarefy_97.txt", sep="\t", quote=FALSE, row.names=TRUE)
