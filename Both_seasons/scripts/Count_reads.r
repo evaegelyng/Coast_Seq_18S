@@ -34,15 +34,3 @@ sum(colSums(no.sing))
 # 1812625200 = 1,813 M reads
 nrow(no.sing)
 # 67,047 ASVs
-
-# Count reads after taxonomic assignment
-classified<-read.table("ncbi_nt_tax/results/classified.txt", sep='\t', header=T, quote="", fill=T, stringsAsFactors = FALSE)
-nrow(classified)
-# 39,610 ASVs
-
-# Count reads after taxonomic filtering/correction
-tax<-read.table("results/cleaned_tax_ncbi_12_12_22.txt", sep="\t", header=T, row.names=1, check.names=F)
-sum(colSums(tax))
-# 762137264 = 762 M reads
-nrow(tax)
-# 4,703 ASVs
