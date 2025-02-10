@@ -268,6 +268,11 @@ write.table(f_wer5p, file="ncbi_nt_tax/results/taxallnomy/flist_to_screen_pident
 
 tax_mat_n <- wer5p
 rownames(tax_mat_n)<-tax_mat_n$qseqid
+
+# Save full taxonomy, including assingments lower than class level, which are uncertain
+write.table(tax_mat_n, "results/cleaned_tax_pident90_full.txt", sep="\t", quote=FALSE, row.names=TRUE)
+
+# Extract only higher levels with good certainty
 tax_mat_n<-as.matrix(tax_mat_n[,c("kingdom","phylum","class")])
 
 nrow(tax_mat_n) # 10888
