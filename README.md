@@ -8,6 +8,5 @@ Following the basic processing done for each seasonal dataset, the following scr
 5. scripts/Count_reads.r
 6. ncbi_nt_tax/scripts/add_count_fa.r
 7. ncbi_nt_tax/workflow.py (calling the scripts odin_240903.r taxonomy_v0_1_1_EES.R)
-8. scripts/new_clean_tax_pident90.R
 9. scripts/loki.r
-10. scripts/normalize.r
+10. scripts/normalize_250210.r

@@ -3,25 +3,21 @@
 
 ## Load packages
 library(phyloseq)
-library(tibble)
 library(plyr)
-library(dplyr)
-library(scales)
 library(ggplot2)
-library(stringr)
 library(vegan)
 
-###Load OTU table
+# Load OTU table
 otu_tab<-read.table("~/eDNA/faststorage/Velux/CoastSequence/Autumn/Gua18s/both_seasons/ncbi_nt_tax/results/COSQ_Curated_LULU_97.tsv", sep="\t", header=T, row.names=1,check.names=F)
-###Remove total reads column 
+## Remove total reads column 
 otu_tab<-within(otu_tab,rm(total_reads))
 
-## Count no. of ASVs before removing non-marine classes
+## Count no. of ASVs 
 nrow(otu_tab) # 10884
-## Count no. of reads before removing non-marine classes
+## Count no. of reads 
 sum(colSums(otu_tab)) # 1,492,688,352
 
-#Load taxonomy table
+# Load taxonomy table 
 taxonomy_nt<-read.table("ncbi_nt_tax/results/COSQ_classified.tsv", sep='\t', header=T, quote="", fill=T, stringsAsFactors = FALSE)
 ### Remove read count from qseqid
 head(taxonomy_nt$qseqid)
@@ -29,15 +25,31 @@ taxonomy_nt$qseqid<-sub("\\;.*","",taxonomy_nt$qseqid)
 head(taxonomy_nt$qseqid)
 rownames(taxonomy_nt)<-taxonomy_nt$qseqid
 
-## Load table of marine/non-marine classes
-env<-read.table("ncbi_nt_tax/results/18S_and_COI_classes_environment.txt",sep="\t", header=T, check.names=F)
-## Check if any classes have not been assigned to marine/non-marine
-taxonomy_nt_na <- taxonomy_nt[!taxonomy_nt$class %in% env$class,]
-unique(taxonomy_nt_na$class) # NA, so all classes have been assigned
+# Subset taxonomy table to OTUs retained by LULU
+## Count no. of ASVs before filtering
+nrow(taxonomy_nt) # 16025
+taxonomy_lulu <- taxonomy_nt[rownames(taxonomy_nt) %in% rownames(otu_tab),]
+## Count no. of ASVs after filtering
+nrow(taxonomy_lulu) # 10884 - OK
 
-## Remove non-marine classes from taxonomy table
-tax_mar <- taxonomy_nt[taxonomy_nt$class %in% env$class[env$marine=="yes"],]
-###Convert to matrix for phyloseq
+# Removing taxa that contain NA in both phylum and class
+tax_nt_phy_class<-subset(taxonomy_lulu, !(is.na(taxonomy_lulu$phylum)&is.na(taxonomy_lulu$class)))
+## Count no. of ASVs after filtering
+nrow(tax_nt_phy_class) # 10884 - so no ASVs removed
+
+## Extract only phylum and class columns 
+tax_nt_phy_class<-tax_nt_phy_class[,c("phylum","class")]
+phy_class_uniq<-unique(tax_nt_phy_class)
+## Export taxonomy table for curation of names and manual assignment as marine/non-marine
+write.table(phy_class_uniq, "ncbi_nt_tax/results/COSQ_classified_phy_class.tsv", sep="\t", quote=FALSE, row.names=FALSE)
+## Import manually curated table
+tax_env<-read.table("ncbi_nt_tax/results/COSQ_classified_phy_class_curated.txt",sep="\t", header=T)
+
+# Remove non-marine classes from taxonomy table
+tax_mar <- tax_nt_phy_class[!tax_nt_phy_class$class %in% tax_env$class[tax_env$marine=="no"],]
+## Count no. of ASVs after removing non-marine classes
+nrow(tax_mar) # 10673
+## Convert to matrix for phyloseq
 tax_mat<-as.matrix(tax_mar)
 
 ## Remove non-marine classes from OTU table
@@ -48,10 +60,10 @@ nrow(otu_mar) # 10673
 ## Count no. of reads after removing non-marine classes
 sum(colSums(otu_mar)) # 1,491,982,988
 
-###Convert to matrix for phyloseq
+### Convert to matrix for phyloseq
 otu_mat<-as.matrix(otu_mar)
 
-###Summarize no. of reads per PCR replicate
+### Summarize no. of reads per PCR replicate
 reads<-colSums(otu_mat)
 mean(reads) # 396909.5
 sd(reads) # 214975
@@ -83,7 +95,7 @@ otu_tab_stand <- decostand(otu_table(merged_1), "total")
 ### Hellinger transformation (square-root) to reduce influence of a few very abundant species 
 otu_tab_trans <- decostand(otu_tab_stand, "hellinger")
 ### Save table
-write.table(otu_tab_trans,"otu_rel_hel_97.txt", sep="\t", row.names=TRUE)
+write.table(otu_tab_trans,"results/otu_rel_hel_97.txt", sep="\t", row.names=TRUE)
 
 ## Rarefy PCR replicates to median depth, keeping replicates with lower depth
 ### Remove PCR replicates with zero reads
@@ -99,17 +111,14 @@ combinedi$q<-combinedi$readsi>threshold
 ### Make histogram of raw read counts
 mui <- ddply(combinedi, .(season, substrate_type), summarise, grp.mean=mean(readsi))
 ggplot(combinedi, aes(x=readsi)) +
-geom_histogram(aes(fill=q), position="identity", alpha=0.6, binwidth=2500) + geom_density(alpha=0.6) + geom_vline(data=mui, aes(xintercept=grp.mean), linetype="dashed") + theme_classic() + scale_x_continuous(labels = comma) + scale_y_continuous(labels = comma) + facet_wrap(substrate_type ~ season, ncol=2, scales="free") + theme(axis.text.x = element_text(hjust = 1, vjust=0, size = 7), axis.text.y = element_text(size=7), strip.text.x = element_text(margin = margin(0.05,0,0.05,0, "cm")), strip.text = element_text(size=7),legend.title=element_text(size=7),legend.text=element_text(size=6)) +  theme(legend.key.size = unit(0.3, "cm")) + labs(title="Reads histogram plot", x ="Reads", y = "Count", fill = paste("Total reads > ",threshold,sep="")) + scale_x_continuous(limits=c(0,1000000)) + scale_y_continuous(limits=c(0,50))
-ggsave("reads_hist_raw.pdf")
+geom_histogram(aes(fill=q), position="identity", alpha=0.6, binwidth=2500) + geom_density(alpha=0.6) + geom_vline(data=mui, aes(xintercept=grp.mean), linetype="dashed") + theme_classic() + scale_x_continuous(labels = "comma") + scale_y_continuous(labels = "comma") + facet_wrap(substrate_type ~ season, ncol=2, scales="free") + theme(axis.text.x = element_text(hjust = 1, vjust=0, size = 7), axis.text.y = element_text(size=7), strip.text.x = element_text(margin = margin(0.05,0,0.05,0, "cm")), strip.text = element_text(size=7),legend.title=element_text(size=7),legend.text=element_text(size=6)) +  theme(legend.key.size = unit(0.3, "cm")) + labs(title="Reads histogram plot", x ="Reads", y = "Count", fill = paste("Total reads > ",threshold,sep="")) + scale_x_continuous(limits=c(0,1000000)) + scale_y_continuous(limits=c(0,50))
+ggsave("results/reads_hist_raw.pdf")
 
 ### Transfer the column generated above to the phyloseq object
 sample_data(COSQ_final)$over_median<-combinedi$q[match(sample_data(COSQ_final)$sample_ID, combinedi$sample_ID)]
 
 ### Extract and then rarefy the PCR replicates with a read depth above the median
 above_t<-rarefy_even_depth(subset_samples(COSQ_final, over_median==TRUE), sample.size=as.numeric(threshold), replace=FALSE, trimOTUs = TRUE, rngseed= 13072021)
-
-# 1129OTUs were removed because they are no longer 
-# present in any sample after random subsampling
 
 ### Extract the PCR replicates with a read depth at or below the median
 below_t<-subset_samples(COSQ_final, over_median==FALSE)
@@ -154,11 +163,8 @@ sample_data(merged)$over_median<-combined$q[match(sample_data(merged)$sample_roo
 ### Extract and then rarefy the samples with a read depth above the median
 above_t<-rarefy_even_depth(subset_samples(merged, over_median==TRUE), sample.size=as.numeric(thres), replace=FALSE, trimOTUs = TRUE, rngseed= 13072021)
 
-#1396OTUs were removed
-
 ### Extract the samples with a read depth at or below the median
 below_t<-subset_samples(merged, over_median==FALSE)
-
 
 ### Merge the rarefied samples with the low-depth samples
 COSQ_merge2<-merge_phyloseq(above_t, below_t)
@@ -173,7 +179,7 @@ COSQ_rare2
 tax_m<-data.frame(tax_table(COSQ_rare2))
 otu_m<-data.frame(otu_table(COSQ_rare2),check.names=F)
 
-write.table(data.frame(sample_data(COSQ_rare2), check.names=F), "metadata/metadata_rarefy_97.txt", sep="\t", quote=FALSE, row.names=TRUE)
+write.table(data.frame(sample_data(COSQ_rare2), check.names=F), "results/metadata/metadata_rarefy_97.txt", sep="\t", quote=FALSE, row.names=TRUE)
 
-write.table(otu_m, "otu_rarefy_97.txt", sep="\t", quote=FALSE, row.names=TRUE)
-write.table(tax_m, "tax_rarefy_97.txt", sep="\t", quote=FALSE, row.names=TRUE)
+write.table(otu_m, "results/otu_rarefy_97.txt", sep="\t", quote=FALSE, row.names=TRUE)
+write.table(tax_m, "results/tax_rarefy_97.txt", sep="\t", quote=FALSE, row.names=TRUE)
