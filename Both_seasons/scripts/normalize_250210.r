@@ -1,9 +1,10 @@
 # Script to normalize phyloseq objects from COSQ data
-# Should be run from the both_seasons folder, using the metabar_2021 environment
+# Should be run from the both_seasons folder, using the hmsc environment
 
 ## Load packages
 library(phyloseq)
 library(plyr)
+library(dplyr)
 library(ggplot2)
 library(vegan)
 
@@ -37,13 +38,38 @@ tax_nt_phy_class<-subset(taxonomy_lulu, !(is.na(taxonomy_lulu$phylum)&is.na(taxo
 ## Count no. of ASVs after filtering
 nrow(tax_nt_phy_class) # 10884 - so no ASVs removed
 
-## Extract only phylum and class columns 
-tax_nt_phy_class<-tax_nt_phy_class[,c("phylum","class")]
+## Merge taxonomy table with OTU table
+tax_otu<-merge(tax_nt_phy_class, otu_tab, by="row.names")
+## Remake row names
+rownames(tax_otu)<-tax_otu$Row.names
+## Remove row.names column
+tax_otu<-tax_otu[,-1]
+
+## Find first sample column
+tax_otu[1:2,26:32] # Column 27 is first sample column
+## Check that last column is a sample column
+n <- ncol(tax_otu)
+tax_otu[1:2,(n-1):n] # OK
+
+## Count no. of reads per MOTU
+tax_otu$total_reads<-rowSums(tax_otu[,27:n])
+## Determine MOTU with most reads per class
+tax_otu_top_max <- tax_otu %>%
+  group_by(class) %>%
+  mutate(top_MOTU_class = score.id[which.max(total_reads)],
+        pident_max_class = pident.max.best[which.max(pident.max.best)],
+        total_reads_class = sum(total_reads)) %>%
+  ungroup()
+
+## Export complete table
+write.table(tax_otu_top_max, "ncbi_nt_tax/results/18S_classified_all.tsv", sep="\t", quote=FALSE, row.names=FALSE)
+## Extract only phylum, class, top MOTU per class and max similarity per class
+tax_nt_phy_class<-tax_otu_top_max[,c("phylum","class","top_MOTU_class","pident_max_class","total_reads_class")]
 phy_class_uniq<-unique(tax_nt_phy_class)
 ## Export taxonomy table for curation of names and manual assignment as marine/non-marine
-write.table(phy_class_uniq, "ncbi_nt_tax/results/COSQ_classified_phy_class.tsv", sep="\t", quote=FALSE, row.names=FALSE)
+write.table(phy_class_uniq, "ncbi_nt_tax/results/18S_classified_phy_class.tsv", sep="\t", quote=FALSE, row.names=FALSE)
 ## Import manually curated table
-tax_env<-read.table("ncbi_nt_tax/results/COSQ_classified_phy_class_curated.txt",sep="\t", header=T)
+tax_env<-read.table("ncbi_nt_tax/results/18S_classified_phy_class_curated.txt",sep="\t", header=T)
 
 # Remove non-marine classes from taxonomy table
 tax_mar <- tax_nt_phy_class[!tax_nt_phy_class$class %in% tax_env$class[tax_env$marine=="no"],]
@@ -179,7 +205,7 @@ COSQ_rare2
 tax_m<-data.frame(tax_table(COSQ_rare2))
 otu_m<-data.frame(otu_table(COSQ_rare2),check.names=F)
 
-write.table(data.frame(sample_data(COSQ_rare2), check.names=F), "results/metadata/metadata_rarefy_97.txt", sep="\t", quote=FALSE, row.names=TRUE)
+write.table(data.frame(sample_data(COSQ_rare2), check.names=F), "results/metadata/metadata_rarefy.txt", sep="\t", quote=FALSE, row.names=TRUE)
 
-write.table(otu_m, "results/otu_rarefy_97.txt", sep="\t", quote=FALSE, row.names=TRUE)
-write.table(tax_m, "results/tax_rarefy_97.txt", sep="\t", quote=FALSE, row.names=TRUE)
+write.table(otu_m, "results/otu_rarefy.txt", sep="\t", quote=FALSE, row.names=TRUE)
+write.table(tax_m, "results/tax_rarefy.txt", sep="\t", quote=FALSE, row.names=TRUE)
