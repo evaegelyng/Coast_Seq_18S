@@ -2,7 +2,26 @@ Title of the study: Will be added upon acceptance of the manuscript, as the repo
 
 Short summary of the study: Will be added upon acceptance of the manuscript, as the repository is public
 
-Package versions: cutadapt 4.1, dada2 1.22.0, sickle-trim 1.33, phyloseq 1.38.0, ggplot2 3.3.6, vegan 2.6_2, reshape2 1.4.4, plyr 1.8.7, dplyr 1.0.10, scales 1.2.1, stringr 1.4.1, blast 2.12.0, tidyverse 2.0.0, biostrings 2.66.0, seqinr 4.2_30, taxizedb 0.3.0, RColorBrewer 1.1_3, swarm 2.1.6
+Package versions: 
+
+•  blast 2.12.0
+•  biostrings 2.66.0
+•  cutadapt 4.1
+•  dada2 1.22.0
+•  dplyr 1.0.10
+•  ggplot2 3.3.6
+•  phyloseq 1.38.0
+•  plyr 1.8.7
+•  RColorBrewer 1.1_3
+•  reshape2 1.4.4
+•  scales 1.2.1
+•  seqinr 4.2_30
+•  sickle-trim 1.33
+•  stringr 1.4.1
+•  swarm 2.1.6
+•  taxizedb 0.3.0
+•  tidyverse 2.0.0
+•  vegan 2.6_2
 
 Overview of folders/files and their contents: The folder "Basic processing" contains the gwf workflow file (workflow.py) and a folder with scripts for the basic processing of raw amplicon sequencing data, from demultiplexing of fastq files to the generation of an ASV table with a corresponding file of ASV sequences. The folder "Final_scripts" contains scripts for further processing, including taxonomic assignment, metadata formatting, ASV filtering based on negative controls and prevalence, and normalization by rarefying.
 
